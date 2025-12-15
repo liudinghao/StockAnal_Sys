@@ -1,12 +1,16 @@
 # 智能分析系统
 
-![版本](https://img.shields.io/badge/版本-2.1.0-blue.svg)
+![版本](https://img.shields.io/badge/版本-2.1.1-blue.svg)
 ![Python](https://img.shields.io/badge/Python-3.7+-green.svg)
 ![Flask](https://img.shields.io/badge/Flask-2.0+-red.svg)
 ![AKShare](https://img.shields.io/badge/AKShare-1.0.0+-orange.svg)
 ![AI](https://img.shields.io/badge/AI_API-集成-blueviolet.svg)
 
 ![系统首页截图](./images/1.png)
+
+## ⭐ Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=LargeCupPanda/StockAnal_Sys&type=Date)](https://star-history.com/#LargeCupPanda/StockAnal_Sys&Date)
 
 ## 📝 项目概述
 
@@ -54,30 +58,44 @@
 ```
 智能分析系统/
 │
-├── web_server.py            # Web服务器和路由控制
-├── stock_analyzer.py        # 股票分析核心引擎
-├── us_stock_service.py      # 美股服务（可选）
-├── start.sh                 # 服务管理脚本
-├── news_fetcher.py          # 新闻获取与缓存
-├── stock_qa.py              # 智能问答功能，支持联网搜索
+├── run.py                   # 应用入口
+├── app/                     # 应用主目录
+│   ├── core/                # 核心模块
+│   │   └── database.py      # 数据库管理
+│   │
+│   ├── analysis/            # 分析引擎模块
+│   │   ├── stock_analyzer.py        # 股票分析核心引擎
+│   │   ├── fundamental_analyzer.py  # 基本面分析
+│   │   ├── capital_flow_analyzer.py # 资金流向分析
+│   │   ├── industry_analyzer.py     # 行业分析
+│   │   ├── index_industry_analyzer.py # 指数行业分析
+│   │   ├── etf_analyzer.py          # ETF分析
+│   │   ├── scenario_predictor.py    # 情景预测
+│   │   ├── risk_monitor.py          # 风险监控
+│   │   ├── stock_qa.py              # 智能问答（支持联网搜索）
+│   │   ├── news_fetcher.py          # 新闻获取与缓存
+│   │   └── us_stock_service.py      # 美股服务
+│   │
+│   ├── web/                 # Web服务模块
+│   │   ├── web_server.py            # Web服务器和路由控制
+│   │   ├── auth_middleware.py       # 认证中间件
+│   │   ├── industry_api_endpoints.py # 行业API端点
+│   │   ├── templates/               # HTML模板
+│   │   │   ├── layout.html          # 基础布局模板
+│   │   │   ├── index.html           # 首页（财经门户风格）
+│   │   │   ├── dashboard.html       # 智能仪表盘
+│   │   │   ├── stock_detail.html    # 股票详情页
+│   │   │   ├── market_scan.html     # 市场扫描页面
+│   │   │   ├── portfolio.html       # 投资组合页面
+│   │   │   ├── etf_analysis.html    # ETF分析页面
+│   │   │   ├── agent_analysis.html  # Agent智能分析页面
+│   │   │   └── ...                  # 其他页面
+│   │   └── static/                  # 静态资源
+│   │
+│   └── tradingagents/       # 交易代理模块（开发中）
 │
-├── templates/               # HTML模板
-│   ├── layout.html          # 基础布局模板
-│   ├── index.html           # 首页（财经门户风格）
-│   ├── dashboard.html       # 智能仪表盘
-│   ├── stock_detail.html    # 股票详情页
-│   ├── market_scan.html     # 市场扫描页面
-│   ├── portfolio.html       # 投资组合页面
-│   └── error.html           # 错误页面
-│   └── *********            # 不一一列举了
-│
-├── static/                  # 静态资源
-│   ├── favicon.ico          # favicon.ico
-│   └── swagger.json         # API文档
-│
-├── data/                    # 数据存储目录
-│   └── news/                # 新闻缓存目录
-│
+├── Dockerfile               # Docker构建文件
+├── docker-compose.yml       # Docker编排配置
 └── .env                     # 环境变量配置文件
 ```
 
@@ -169,10 +187,16 @@ NEWS_MODEL=你的可联网模型
 
 ### 启动系统
 
-使用提供的启动脚本：
+方式一：直接运行
 
 ```bash
-bash start.sh start
+python run.py
+```
+
+方式二：使用启动脚本
+
+```bash
+bash scripts/start.sh start
 ```
 
 启动后，访问 `http://localhost:8888` 打开系统。
@@ -180,11 +204,11 @@ bash start.sh start
 ### 其他管理命令
 
 ```bash
-bash start.sh stop       # 停止服务
-bash start.sh restart    # 重启服务
-bash start.sh status     # 查看服务状态
-bash start.sh monitor    # 以监控模式运行（自动重启）
-bash start.sh logs       # 查看日志
+bash scripts/start.sh stop       # 停止服务
+bash scripts/start.sh restart    # 重启服务
+bash scripts/start.sh status     # 查看服务状态
+bash scripts/start.sh monitor    # 以监控模式运行（自动重启）
+bash scripts/start.sh logs       # 查看日志
 ```
 
 ### Docker启动
@@ -243,6 +267,14 @@ docker-compose up -d
     - 分析行业整体表现和资金流向
     - 对比不同行业投资机会
 
+12. **ETF分析** (`/etf_analysis`)
+    - ETF基金分析和评估
+    - 跟踪ETF表现和持仓分析
+
+13. **Agent智能分析** (`/agent_analysis`)
+    - 基于AI Agent的深度分析
+    - 多维度智能投资建议
+
 ### 常用操作
 
 - **分析股票**：在智能仪表盘输入股票代码，点击"分析"
@@ -266,10 +298,24 @@ docker-compose up -d
 - 情景预测API：`/api/scenario_predict`
 - 行业分析API：`/api/industry_analysis`
 - 最新新闻API：`/api/latest_news`
+- ETF分析API：`/api/start_etf_analysis`
+- Agent分析API：`/api/start_agent_analysis`
+- 资金流向API：`/api/capital_flow`
+- 基本面分析API：`/api/fundamental_analysis`
 
 ## 📋 版本历史
 
-### v2.1.0 (当前版本)
+### v2.1.1 (当前版本)
+- **Issue #34 修复**: TradingAgentsGraph.propagate()参数兼容性问题，使用inspect动态检查方法签名
+- **Issue #29 新增**: 市场扫描按板块扫描功能（科创50/100、北证50），使用指数成分股接口增强稳定性
+- **Issue #31 新增**: 智能问答历史记录功能，LocalStorage保存查询记录和对话内容
+- 新增板块股票API：`/api/board_stocks`
+
+### v2.1.0
+- 重构项目为模块化架构（app/analysis、app/web、app/core）
+- 新增ETF分析功能，支持ETF基金评估和持仓分析
+- 新增Agent智能分析功能，基于AI Agent的深度分析
+- 新增认证中间件，增强系统安全性
 - 优化缓存机制，增加市场收盘时自动清理缓存
 - 增强错误处理和系统稳定性
 - 新增智能问答功能，支持联网搜索实时信息和多轮对话

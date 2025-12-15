@@ -65,6 +65,20 @@
                     </div>
                 </div>
             </div>
+            <!-- Issue #31: 历史记录 -->
+            <div class="card">
+                <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0">历史查询</h6>
+                    <button class="btn btn-sm btn-outline-secondary" id="clear-history" title="清空历史">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" id="history-list" style="max-height: 200px; overflow-y: auto;">
+                        <div class="text-muted text-center py-2 small">暂无历史记录</div>
+                    </div>
+                </div>
+            </div>
         </div>
         <div class="col-md-9">
             <div class="card mb-3">
@@ -297,6 +311,35 @@
             $('#question-input').val(question);
             $('#question-form').submit();
         });
+
+        // Issue #31: 加载历史记录
+        loadQaHistory();
+
+        // Issue #31: 清空历史按钮
+        $('#clear-history').click(function() {
+            localStorage.removeItem('qa_history');
+            loadQaHistory();
+        });
+
+        // Issue #31: 历史记录点击
+        $(document).on('click', '.history-item', function() {
+            const code = $(this).data('code');
+            const market = $(this).data('market');
+            $('#stock-code').val(code);
+            $('#market-type').val(market);
+
+            // 尝试加载历史对话
+            if (loadChatHistory(code)) {
+                // 有历史对话，直接显示
+                selectedStock.code = code;
+                selectedStock.market_type = market;
+                $('#chat-container').show();
+                scrollToBottom();
+            } else {
+                // 没有历史对话，重新选择股票
+                selectStock(code, market);
+            }
+        });
     });
 
     function selectStock(stockCode, marketType) {
@@ -342,6 +385,11 @@
 
                     // 显示聊天界面
                     $('#chat-container').show();
+
+                    // Issue #31: 保存到历史记录（仅当分析成功且不是从历史记录点击时）
+                    if (selectedStock.name && selectedStock.name !== '分析失败' && selectedStock.name !== '未知') {
+                        saveToQaHistory(selectedStock.code, selectedStock.name, selectedStock.market_type);
+                    }
 
                     // 欢迎消息
                     addSystemMessage(`我已加载 ${selectedStock.name}(${selectedStock.code}) 的数据，您可以问我关于这只股票的问题。`);
@@ -425,6 +473,8 @@
                 });
 
                 scrollToBottom();
+                // Issue #31: 保存对话内容
+                saveChatHistory(selectedStock.code);
             },
             error: function(xhr, status, error) {
                 clearInterval(hintInterval);
@@ -435,6 +485,8 @@
                 }
                 addSystemMessage(`<span class="text-danger">${errorMsg}</span>`);
                 scrollToBottom();
+                // Issue #31: 保存对话内容
+                saveChatHistory(selectedStock.code);
             }
         });
     }
@@ -475,6 +527,58 @@
     function scrollToBottom() {
         const chatContainer = document.getElementById('chat-messages');
         chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    // Issue #31: 保存查询到历史记录
+    function saveToQaHistory(code, name, market) {
+        let history = JSON.parse(localStorage.getItem('qa_history') || '[]');
+        // 移除重复项
+        history = history.filter(item => item.code !== code);
+        // 添加到开头
+        history.unshift({code, name, market, time: new Date().toLocaleString()});
+        // 只保留最近10条
+        history = history.slice(0, 10);
+        localStorage.setItem('qa_history', JSON.stringify(history));
+        loadQaHistory();
+    }
+
+    // Issue #31: 保存对话内容
+    function saveChatHistory(code) {
+        if (!code) return;
+        const chatHtml = $('#chat-messages').html();
+        localStorage.setItem('qa_chat_' + code, chatHtml);
+    }
+
+    // Issue #31: 加载对话内容
+    function loadChatHistory(code) {
+        if (!code) return false;
+        const chatHtml = localStorage.getItem('qa_chat_' + code);
+        if (chatHtml) {
+            $('#chat-messages').html(chatHtml);
+            return true;
+        }
+        return false;
+    }
+
+    // Issue #31: 加载历史记录
+    function loadQaHistory() {
+        const history = JSON.parse(localStorage.getItem('qa_history') || '[]');
+        const $list = $('#history-list');
+
+        if (history.length === 0) {
+            $list.html('<div class="text-muted text-center py-2 small">暂无历史记录</div>');
+            return;
+        }
+
+        let html = '';
+        history.forEach(item => {
+            html += `<a href="javascript:void(0)" class="list-group-item list-group-item-action py-1 history-item"
+                       data-code="${item.code}" data-market="${item.market}">
+                       <small class="fw-bold">${item.name || item.code}</small>
+                       <small class="text-muted float-end">${item.code}</small>
+                     </a>`;
+        });
+        $list.html(html);
     }
 
     function formatAnswer(text) {

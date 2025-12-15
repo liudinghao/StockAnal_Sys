@@ -1330,6 +1330,40 @@ def get_industry_stocks():
         return jsonify({'error': str(e)}), 500
 
 
+# Issue #29: 按板块获取股票列表（科创板/创业板/北交所等）
+@app.route('/api/board_stocks', methods=['GET'])
+def get_board_stocks():
+    """获取指定板块的股票列表（使用指数成分股接口，更稳定）"""
+    try:
+        import akshare as ak
+        board = request.args.get('board', 'hs300')
+
+        # 使用指数成分股接口，比实时行情接口更稳定
+        board_map = {
+            'hs300': ('000300', '沪深300'),
+            'zz500': ('000905', '中证500'),
+            'zz1000': ('000852', '中证1000'),
+            'kc50': ('000688', '科创50'),
+            'kc100': ('000698', '科创100'),
+            'bj50': ('899050', '北证50'),
+        }
+
+        if board not in board_map:
+            return jsonify({'error': f'不支持的板块类型: {board}，支持: {list(board_map.keys())}'}), 400
+
+        index_code, index_name = board_map[board]
+        app.logger.info(f"获取 {index_name}({index_code}) 成分股列表")
+
+        df = ak.index_stock_cons_weight_csindex(symbol=index_code)
+        stock_list = df['成分券代码'].tolist() if '成分券代码' in df.columns else []
+        app.logger.info(f"找到 {len(stock_list)} 只 {index_name} 成分股")
+
+        return jsonify({'stock_list': stock_list, 'count': len(stock_list), 'index_name': index_name})
+    except Exception as e:
+        app.logger.error(f"获取板块股票时出错: {traceback.format_exc()}")
+        return jsonify({'error': str(e)}), 500
+
+
 # 添加到web_server.py
 def clean_old_tasks():
     """清理旧的扫描任务"""
@@ -2042,7 +2076,19 @@ def start_agent_analysis():
                     update_task_status('agent_analysis', task_id, TASK_RUNNING, progress=progress, result={'current_step': step})
 
                 today = analysis_date or datetime.now().strftime('%Y-%m-%d')
-                state, decision = ta.propagate(stock_code, today, market_type=market_type, progress_callback=progress_callback)
+
+                # Issue #34 修复: 检查propagate方法签名，兼容不同版本的tradingagents库
+                import inspect
+                propagate_sig = inspect.signature(ta.propagate)
+                propagate_params = propagate_sig.parameters
+
+                kwargs = {}
+                if 'market_type' in propagate_params:
+                    kwargs['market_type'] = market_type
+                if 'progress_callback' in propagate_params:
+                    kwargs['progress_callback'] = progress_callback
+
+                state, decision = ta.propagate(stock_code, today, **kwargs)
                 
                 # 修复：在任务完成时，获取并添加公司名称到最终结果中
                 try:

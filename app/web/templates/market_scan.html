@@ -122,6 +122,17 @@
                         </div>
                         <div class="col-md-3">
                             <div class="input-group">
+                                <span class="input-group-text">选择板块</span>
+                                <select class="form-select" id="board-selector">
+                                    <option value="">-- 选择板块 --</option>
+                                    <option value="kc50">科创50</option>
+                                    <option value="kc100">科创100</option>
+                                    <option value="bj50">北证50</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="input-group">
                                 <span class="input-group-text">自定义股票</span>
                                 <input type="text" class="form-control" id="custom-stocks" placeholder="多个股票代码用逗号分隔">
                             </div>
@@ -232,6 +243,13 @@
                 return;
             }
 
+            // 获取板块股票 (Issue #29)
+            const board = $('#board-selector').val();
+            if (board) {
+                fetchBoardStocks(board);
+                return;
+            }
+
             // 获取自定义股票
             const customStocks = $('#custom-stocks').val().trim();
             if (customStocks) {
@@ -246,6 +264,7 @@
         $('#index-selector').change(function() {
             if ($(this).val()) {
                 $('#industry-selector').val('');
+                $('#board-selector').val('');
             }
         });
 
@@ -253,6 +272,15 @@
         $('#industry-selector').change(function() {
             if ($(this).val()) {
                 $('#index-selector').val('');
+                $('#board-selector').val('');
+            }
+        });
+
+        // 板块选择变化 (Issue #29)
+        $('#board-selector').change(function() {
+            if ($(this).val()) {
+                $('#index-selector').val('');
+                $('#industry-selector').val('');
             }
         });
 
@@ -317,6 +345,41 @@
                     $('#scan-loading').hide();
                     $('#scan-results').show();
                     showError('获取行业成分股失败: ' + (error.responseJSON ? error.responseJSON.error : error.statusText));
+                }
+            });
+        }
+
+        // 获取板块股票 (Issue #29)
+        function fetchBoardStocks(board) {
+            $('#scan-loading').show();
+            $('#scan-results').hide();
+
+            const boardNames = {
+                'kc50': '科创50',
+                'kc100': '科创100',
+                'bj50': '北证50'
+            };
+
+            $.ajax({
+                url: `/api/board_stocks?board=${board}`,
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    const stockList = response.stock_list;
+                    if (stockList && stockList.length > 0) {
+                        window.lastScanList = stockList;
+                        showInfo(`已获取${boardNames[board] || board}共${stockList.length}只股票，开始扫描...`);
+                        scanMarket(stockList);
+                    } else {
+                        $('#scan-loading').hide();
+                        $('#scan-results').show();
+                        showError('获取板块股票失败，或股票列表为空');
+                    }
+                },
+                error: function(error) {
+                    $('#scan-loading').hide();
+                    $('#scan-results').show();
+                    showError('获取板块股票失败: ' + (error.responseJSON ? error.responseJSON.error : error.statusText));
                 }
             });
         }
